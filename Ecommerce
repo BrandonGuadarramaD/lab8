@@ -1,0 +1,632 @@
+openapi: 3.0.0
+servers:
+  # Added by API Auto Mocking Plugin
+  - description: API Prod
+    url: https://api.example.com/v1
+  - description: API Develop
+    url: https://developm.example.com/v1
+info:
+  title: E-commerce API
+  description: API para gestionar usuarios, pedidos e interacciones con clientes.
+  version: 1.0.0
+  contact:
+    email: brandon.guadarrama@digitalfemsa.com
+  license:
+    name: Apache 2.0
+    url: 'http://www.apache.org/licenses/LICENSE-2.0.html'
+tags:
+  - name: users
+    description: Operations related to users
+  - name: orders
+    description: Operations related to orders
+  - name: tickets
+    description: Operations related to tickets
+
+paths:
+  # User Management
+  /users:
+    get:
+      security:
+        - BearerAuth: []
+      tags:
+      - users
+      summary: Listar usuarios
+      description: Obtiene una lista de todos los usuarios registrados.
+      responses:
+        '200':
+          description: Lista de usuarios
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/User'
+        '401':
+          description: No autorizado
+        '500':
+          description: Error interno del servidor
+    post:
+      tags:
+      - users
+      summary: Crear un nuevo usuario
+      description: Registra un nuevo usuario en el sistema.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserInput'
+      responses:
+        '201':
+          description: Usuario creado exitosamente
+        '400':
+          description: Datos inválidos. Puede ocurrir si faltan campos obligatorios.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Conflicto. El usuario ya existe.
+        '500':
+          description: Error interno del servidor
+
+  /users/{userId}:
+    get:
+      security:
+        - BearerAuth: []
+      tags:
+      - users
+      summary: Obtener un usuario
+      description: Obtiene los detalles de un usuario por su ID.
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Detalles del usuario
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '400':
+          description: ID de usuario no válido
+        '404':
+          description: Usuario no encontrado
+        '500':
+          description: Error interno del servidor
+    put:
+      security:
+        - BearerAuth: []
+      tags:
+      - users
+      summary: Actualizar un usuario
+      description: Actualiza los datos de un usuario existente.
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserInput'
+      responses:
+        '200':
+          description: Usuario actualizado exitosamente
+        '400':
+          description: Datos inválidos
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Usuario no encontrado
+        '500':
+          description: Error interno del servidor
+    delete:
+      security:
+        - BearerAuth: []
+      tags:
+      - users
+      summary: Eliminar un usuario
+      description: Elimina un usuario existente por su ID.
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Usuario eliminado exitosamente
+        '400':
+          description: ID de usuario no válido
+        '404':
+          description: Usuario no encontrado
+        '500':
+          description: Error interno del servidor
+
+  /orders:
+    post:
+      tags:
+      - orders
+      summary: Crear una nueva orden
+      description: Permite a los clientes autenticados crear una nueva orden.
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - userId
+                - items
+              properties:
+                userId:
+                  type: string
+                  description: ID del usuario que realiza la orden.
+                items:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      productId:
+                        type: string
+                      quantity:
+                        type: integer
+                        minimum: 1
+                        description: Cantidad del producto.
+                      price:
+                        type: number
+                        description: Precio unitario del producto.
+                totalAmount:
+                  type: number
+                  description: Monto total de la orden.
+      responses:
+        '201':
+          description: Orden creada exitosamente.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Order'
+        '400':
+          description: Datos inválidos.
+        '401':
+          description: No autorizado.
+        '500':
+          description: Error interno del servidor.
+    get:
+      tags:
+      - orders
+      summary: Listar órdenes
+      description: Permite listar órdenes. Los clientes solo ven sus propias órdenes; los administradores pueden ver todas.
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: status
+          in: query
+          description: Filtrar por estado de la orden.
+          schema:
+            type: string
+            enum: [pending, paid, shipped, completed, cancelled]
+        - name: userId
+          in: query
+          description: Filtrar órdenes por ID de usuario (solo para administradores).
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Lista de órdenes.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Order'
+        '401':
+          description: No autorizado.
+        '500':
+          description: Error interno del servidor.
+
+  /orders/{orderId}:
+    get:
+      tags:
+      - orders
+      summary: Ver detalles de una orden
+      description: Permite al cliente autenticado o al administrador ver los detalles de una orden.
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: orderId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Detalles de la orden.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Order'
+        '401':
+          description: No autorizado.
+        '403':
+          description: Prohibido. Solo puedes acceder a tus propias órdenes (a menos que seas administrador).
+        '404':
+          description: Orden no encontrada.
+        '500':
+          description: Error interno del servidor.
+    patch:
+      tags:
+      - orders
+      summary: Actualizar el estado de una orden
+      description: Permite a los administradores actualizar el estado de una orden.
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: orderId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                status:
+                  type: string
+                  enum: [pending, paid, shipped, completed, cancelled]
+      responses:
+        '200':
+          description: Orden actualizada exitosamente.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Order'
+        '400':
+          description: Datos inválidos.
+        '401':
+          description: No autorizado.
+        '403':
+          description: Prohibido. Solo los administradores pueden actualizar órdenes.
+        '404':
+          description: Orden no encontrada.
+        '500':
+          description: Error interno del servidor.
+    delete:
+      tags:
+      - orders
+      summary: Eliminar una orden
+      description: Permite a los administradores eliminar una orden.
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: orderId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Orden eliminada exitosamente.
+        '401':
+          description: No autorizado.
+        '403':
+          description: Prohibido. Solo los administradores pueden realizar esta acción.
+        '404':
+          description: Orden no encontrada.
+        '500':
+          description: Error interno del servidor.
+  /tickets:
+    post:
+      tags:
+      - tickets
+      summary: Crear un ticket de soporte
+      description: Permite a un cliente autenticado abrir un ticket de soporte.
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TicketInput'
+      responses:
+        '201':
+          description: Ticket creado exitosamente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Ticket'
+        '400':
+          description: Datos inválidos
+        '401':
+          description: No autorizado
+        '500':
+          description: Error interno del servidor
+    get:
+      tags:
+      - tickets
+      summary: Listar tickets del usuario
+      description: Permite al cliente autenticado obtener todos sus tickets de soporte.
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Lista de tickets del usuario
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Ticket'
+        '401':
+          description: No autorizado
+        '500':
+          description: Error interno del servidor
+
+  /tickets/{ticketId}:
+    get:
+      tags:
+      - tickets
+      summary: Ver detalles de un ticket
+      description: Permite al cliente o a un administrador ver los detalles de un ticket específico.
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: ticketId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Detalles del ticket
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Ticket'
+        '401':
+          description: No autorizado
+        '403':
+          description: Prohibido. Solo puedes acceder a tus propios tickets (a menos que seas administrador).
+        '404':
+          description: Ticket no encontrado
+        '500':
+          description: Error interno del servidor
+    patch:
+      tags:
+      - tickets
+      summary: Actualizar el estado de un ticket
+      description: Permite a un administrador actualizar el estado de un ticket.
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                status:
+                  type: string
+                  enum: [open, in_progress, resolved]
+      parameters:
+        - name: ticketId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Ticket actualizado exitosamente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Ticket'
+        '400':
+          description: Datos inválidos
+        '401':
+          description: No autorizado
+        '403':
+          description: Prohibido. Solo los administradores pueden actualizar tickets.
+        '404':
+          description: Ticket no encontrado
+        '500':
+          description: Error interno del servidor
+
+  # Customer Interactions: Ticket Messages
+  /tickets/{ticketId}/messages:
+    post:
+      tags:
+      - tickets
+      summary: Agregar un mensaje a un ticket
+      description: Permite agregar mensajes a un ticket para comunicarse con el equipo de soporte.
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MessageInput'
+      parameters:
+        - name: ticketId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '201':
+          description: Mensaje agregado exitosamente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+        '400':
+          description: Datos inválidos
+        '401':
+          description: No autorizado
+        '403':
+          description: Prohibido. Solo puedes agregar mensajes a tickets donde seas el creador (o administrador).
+        '404':
+          description: Ticket no encontrado
+        '500':
+          description: Error interno del servidor
+    get:
+      tags:
+      - tickets
+      summary: Listar mensajes de un ticket
+      description: Permite al usuario autenticado obtener los mensajes de un ticket.
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: ticketId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Lista de mensajes del ticket
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Message'
+        '401':
+          description: No autorizado
+        '403':
+          description: Prohibido. Solo puedes acceder a mensajes de tus propios tickets (a menos que seas administrador).
+        '404':
+          description: Ticket no encontrado
+        '500':
+          description: Error interno del servidor
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        email:
+          type: string
+        role:
+          type: string
+          enum: [customer, admin]
+    UserInput:
+      type: object
+      required:
+        - name
+        - email
+        - role
+      properties:
+        name:
+          type: string
+        email:
+          type: string
+        role:
+          type: string
+          enum: [customer, admin]
+
+    Order:
+      type: object
+      properties:
+        id:
+          type: string
+        userId:
+          type: string
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrderItem'
+        totalAmount:
+          type: number
+        status:
+          type: string
+          enum: [pending, completed, cancelled]
+    OrderItem:
+      type: object
+      properties:
+        productId:
+          type: string
+        quantity:
+          type: integer
+        price:
+          type: number
+
+    Ticket:
+      type: object
+      properties:
+        id:
+          type: string
+        userId:
+          type: string
+        subject:
+          type: string
+        description:
+          type: string
+        status:
+          type: string
+          enum: [open, in_progress, resolved]
+    TicketInput:
+      type: object
+      required:
+        - subject
+        - description
+      properties:
+        subject:
+          type: string
+        description:
+          type: string
+    Message:
+      type: object
+      properties:
+        id:
+          type: string
+        ticketId:
+          type: string
+        senderId:
+          type: string
+        message:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+    MessageInput:
+      type: object
+      required:
+        - message
+      properties:
+        message:
+          type: string
+
+    Error:
+      type: object
+      properties:
+        code:
+          type: integer
+          example: 400
+        message:
+          type: string
+          example: Datos inválidos en la solicitud
